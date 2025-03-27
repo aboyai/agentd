@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package mcp;
+
+option go_package = "agentd/proto";
+
+// InstructionService defines the core API for AgentD
+service InstructionService {
+  rpc SendInstruction(InstructionRequest) returns (InstructionResponse);
+  rpc StreamInstruction(InstructionRequest) returns (stream InstructionResponse);
+}
+
+// InstructionRequest sends a URI-based task to be interpreted and routed
+message InstructionRequest {
+  string session_id = 1;       // Used for memory-aware queries (llm://<session>.memory)
+  string instruction = 2;      // llm://... or tool://... or plan://...
+  map<string, string> metadata = 3; // Optional context metadata
+}
+
+// InstructionResponse returns the result and trace of execution
+message InstructionResponse {
+  string content = 1;               // Final response or streamed chunk
+  map<string, string> trace = 2;   // Execution trace: model used, tools invoked, etc.
+  bool complete = 3;               // Set to true when stream is complete
+}

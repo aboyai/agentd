@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AgentD Playground</title>
+  <style>
+    body {
+      background: #0b0c10;
+      color: #00d8ff;
+      font-family: monospace;
+      padding: 2em;
+    }
+    textarea, input {
+      width: 100%;
+      margin-top: 10px;
+      padding: 10px;
+      background: #1f1f1f;
+      color: #00ff99;
+      border: 1px solid #333;
+    }
+    button {
+      margin-top: 1em;
+      padding: 10px 20px;
+      background-color: #00d8ff;
+      color: black;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+    }
+    .box {
+      background: #1f1f1f;
+      border-left: 5px solid #a3ff12;
+      margin-top: 1em;
+      padding: 10px;
+      color: #a3ff12;
+      white-space: pre-wrap;
+    }
+    .content-box {
+      background: #1f1f1f;
+      border-left: 5px solid #00d8ff;
+      padding: 10px;
+      margin-top: 1.5em;
+      font-size: 1.1em;
+      color: #00d8ff;
+    }
+    pre {
+      background: #111;
+      padding: 1em;
+      margin-top: 1.5em;
+      color: #999;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <h1>AgentD LLM Planner Playground</h1>
+
+  <form id="agentForm">
+    <label for="session">Session ID:</label>
+    <input type="text" id="session" value="play1" required />
+
+    <label for="instruction">plan:// instruction:</label>
+    <textarea id="instruction" rows="5">plan://A=llm://mistral:Give me a startup idea;B=llm://mistral.memory:Summarize it;B&lt;-A</textarea>
+
+    <button type="submit">Execute Plan</button>
+  </form>
+
+  <h3>💡 Output</h3>
+  <div id="content" class="content-box">Waiting for output...</div>
+
+  <h3>📦 Trace</h3>
+  <div id="traceList"></div>
+
+  <h3>🧾 Raw JSON</h3>
+  <pre id="result">(empty)</pre>
+
+  <script>
+    const form = document.getElementById('agentForm');
+    const result = document.getElementById('result');
+    const contentBox = document.getElementById('content');
+    const traceBox = document.getElementById('traceList');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      contentBox.textContent = "Executing...";
+      traceBox.innerHTML = "";
+      result.textContent = "(loading...)";
+
+      const session = document.getElementById('session').value;
+      const instruction = document.getElementById('instruction').value;
+
+      const payload = {
+        session_id: session,
+        instruction: instruction,
+        metadata: {}
+      };
+
+      try {
+        const res = await fetch('http://localhost:9090/v1/execute', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const json = await res.json();
+
+        // Output display
+        contentBox.textContent = json.content;
+
+        // Trace listing
+        traceBox.innerHTML = '';
+        for (const [key, val] of Object.entries(json.trace || {})) {
+          const div = document.createElement('div');
+          div.className = 'box';
+          div.textContent = `${key}: ${val}`;
+          traceBox.appendChild(div);
+        }
+
+        // Raw output
+        result.textContent = JSON.stringify(json, null, 2);
+      } catch (err) {
+        contentBox.textContent = "❌ Error connecting to server";
+        result.textContent = err.toString();
+      }
+    });
+  </script>
+</body>
+</html>
